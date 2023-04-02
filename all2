@@ -1,0 +1,34 @@
+MagCAE Algorithm: Normalize the adjacency matrix A˜. For each single-attributed-view m, compute the single-attributed-view proximity Sma. Initialize the GCN embeddings Z0m to the node features Xm. Initialize the weight on Z0m to w0m. Compute the multi-attributed-view proximity Sv. For each training epoch t, do the following: If the algorithm has not converged, do the following: For each single-attributed-view m, do the following: Update the GCN variables Wtm by Eq. (10). Update the GCN embeddings Ztm by Eq. (1). End. Update the multi-attributed view weights wt by Eq. (11). Update the aggregate embeddings Zt by Eq. (2). Update the reconstructed adjacency matrix A′t by Eq. (3). Update the reconstruction loss between A and A′t by Eq. (8). Update the embedding proximity Ste by Eq. (6). Update the node-pairwise similarity loss between Sv and Ste by Eq. (9). Update the total loss Lt by Eq. (7). End. End. Return the node embeddings Z∗ in the iteration of Lt∗. 
+Eq1. Z_m^{l+1}=\phi_m^l\left(\tilde{A} Z_m^l W_m^l\right) 
+Eq2. Z=\psi\left(w_1 \cdot Z_1, \cdots, w_m \cdot Z_m\right) 
+Eq3. A^{\prime}=\sigma\left(Z \cdot Z^T\right) where A′ denotes the reconstructed adjacency matrix, and σ(·) is a non-linear activation function - we use the Sigmoid function in MagCAE. 
+Eq4. s_{i, j}^{a, m}=\operatorname{sim}\left(\mathbf{x}_i^m, \mathbf{x}_j^m\right)=\exp \left(-\gamma_m\left\|\mathbf{x}_i^m-\mathbf{x}_j^m\right\|^2\right) 
+Eq5. s_{i, j}^v=\prod_m \operatorname{sim}\left(\mathbf{x}_i^m, \mathbf{x}_j^m\right)=\prod_m s_{i, j}^{a, m} 
+Eq6. s_{i, j}^e=\exp \left(-\frac{1}{d}\left\|\mathbf{z}_i-\mathbf{z}_j\right\|^2\right) 
+Eq7. \mathcal{L}=\mathcal{L}_{\text {res }}+\lambda \mathcal{L}_{\text {sim }} 
+Eq8. \mathcal{L}_{\text {res }}=\frac{1}{n^2} \sum_i \sum_j \operatorname{CE}\left(a_{i, j}, a_{i, j}^{\prime}\right) 
+Eq9. \mathcal{L}_{s i m}=\frac{1}{n^2} \sum_i \sum_j\left|s_{i, j}, 
+notations:
+G &= (V, E) 
+A &= \text{adjacency matrix of } G 
+X &= \text{node feature matrix} 
+Z &= \text{GCN embedding matrix} 
+W &= \text{weight matrix for multi-attributed view aggregation} 
+\sigma &= \text{non-linear activation function} 
+\mathcal{L} &= \text{loss function} 
+\lambda &= \text{hyperparameter for regularization term} 
+t &= \text{training epoch} 
+i, j &= \text{indices of nodes in } V 
+m &= \text{index of a view} 
+s_{i, j}^a &= \text{single-attributed-view proximity between nodes } i \text{ and } j 
+s_{i, j}^v &= \text{multi-attributed-view proximity between nodes } i \text{ and } j 
+s_{i, j}^e &= \text{embedding proximity between nodes } i \text{ and } j 
+\mathcal{L}_{\text {res }} &= \text{reconstruction loss} 
+\mathcal{L}_{\text {sim }} &= \text{similarity loss} 
+\mathcal{L}_{\text {tot }} &= \text{total loss}
+
+Training, Validation, and Testing Sets:
+For link prediction, we split each dataset into training, validation, and testing set. All these three sets contain all attributed nodes. But the training set has only 85% of the existing edges. The validation set used for hyper-parameter
+optimization contains 5% of existing edges and the same number of randomly added edges. Similarly, the testing set comprises the rest 10% of existing edges and the same number of added edges. For node classification, we randomly choose 80% of nodes and their labels as the training set and use other nodes for testing.
+Evaluation Metrics:
+Average precision (AP) and area under the ROC curve (AUC) [30] are employed to measure the link prediction result. The node classification performance is evaluated by the Micro-F1 score and Macro-F1 score following 10-fold cross-validation.
