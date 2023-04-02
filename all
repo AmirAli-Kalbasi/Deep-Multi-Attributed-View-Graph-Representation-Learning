@@ -285,3 +285,31 @@ ax.set_ylabel('Link prediction performance')
 ax.set_title('GCN hidden layer dimension vs. Link prediction performance')
 
 plt.show()
+
+######################
+import matplotlib.pyplot as plt
+from sklearn.manifold import TSNE
+
+# Load a dataset (example: 'cora')
+dataset_name = 'cora'
+dataset, n_nodes, n_edges, n_views, n_labels = load_dataset(dataset_name)
+
+# Train the model
+model = MagCAE(n_views=n_views, n_nodes=n_nodes, n_latent_dim=n_latent_dim)
+
+Zt = model(dataset)
+
+# Apply t-SNE to the embedding
+tsne = TSNE(n_components=2)
+Zt_tsne = tsne.fit_transform(Zt.detach().numpy())
+
+# Get the true labels for the nodes
+labels = dataset['y'].numpy()
+
+# Plot the t-SNE visualization of the embeddings
+fig, ax = plt.subplots()
+ax.scatter(Zt_tsne[:, 0], Zt_tsne[:, 1], c=labels, cmap='tab10', alpha=0.5)
+ax.set_xlabel('t-SNE component 1')
+ax.set_ylabel('t-SNE component 2')
+ax.set_title('t-SNE visualization of node embeddings')
+plt.show()
