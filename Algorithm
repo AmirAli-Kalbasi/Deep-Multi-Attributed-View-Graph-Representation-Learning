@@ -1,0 +1,71 @@
+Algorithm of MagCAE;
+Input: Multi-attributed-view graph GM = {V, E, X} 
+Output: Node embeddings Z*
+// Definition 1 (Single-attributed-view Graph): A single-attributed-view graph GS={V, E, X} consists of a set of nodes V={vi}, i from 1 to n, an edge set E={ei,j}, and a node attribute set X={xi}, i from 1 to n. Here, n represents the total number of nodes and ei,j = (vi, vj) represents the edge between nodes vi and vj. The adjacency matrix A = [ai,j] of size n×n holds the graph structure where ai,j = 1 if nodes vi and vj are linked, and 0 otherwise. The attribute set X={xi} contains the attribute vector xi corresponding to each node vi.
+//Definition 2 (Multi-attributed-view Graph): A multi-attributed-view graph GM={V, E, X} comprises a node set V, an edge set E, and a multi-attributed view set X={X1, ..., Xm}, containing m independent views. Each view Xξ={xξi}, i from 1 to n, consists of n vectors corresponding to nodes V={vi}, i from 1 to n. For a given node vi, each vector xξi is unique to its own view ξ ranging from 1 to m. It's worth noting that for each node vi, its m attribute vectors {x1i,...,xξi,...,xmi} might have different vector lengths km, since these vectors originate from varied sources.
+//Definition 3 (Single-attributed-view Proximity):
+For a single-attributed view ξ, the attribute proximity of nodes vi and vj, sa,ξi,j ∈Sξa⊆Sa,
+Sξa locally measures the proximity over all pair-wise nodes in the multi-attributed-view graph GM, 
+and Sa={S1a,· · · , Sξa,· · · , Sma} stands for m independent single-attributed-view proximities.
+
+//Definition 4 (Multi-attributed-view Proximity):
+In m multi-attributed views, the nodes vi and vj are multi-attributed by {xξi}m1 and {xξj}m1 
+in the multi-attributed-view graph GM. Their multi-attributed-view proximity svi,j ∈Sv
+globally takes {xξi}m1 and {xξj}m1 into node-pairwise similarity measurement, where Sa is applied.
+
+//Definition 5 (Embedding Proximity):
+The embedding proximity of nodes vi and vj is denoted as sei,j ∈Se, where Se measures 
+the node-pairwise likelihood among the multi-attributed-view graph GM.
+// Dataset Processing
+1.	Choose one dataset:
+- Check for the presence of the datasets in the local storage. If not present, download the datasets: • Cora and Citeseer datasets: Download from https://linqs.soe.ucsc.edu/data • Epinions dataset: Download from http://www.epinions.com/ • Ciao dataset: Download from https://www.cse.msu.edu/˜tangjili/trust.html
+
+• Cora dataset: i. Nodes denoting as publications and edges denoting citation relationships. ii. Create one-hot vector attributes for each node, indicating the presence/absence of words in the corpus. iii. Construct three attributed-view graphs from a sub-corpus. (# Nodes: 2607 # Edges: 5429 # Views: 3 # Label: 7)
+• Citeseer dataset: i. Obtain the scientific citation network dataset. ii. Preprocess the raw dataset by removing nodes with missing attributes. iii. Construct a multi-attributed-view graph following the same strategy as the Cora dataset, with classes of node labels covering six research areas. (# Nodes: 3312 # Edges: 4660 # Views: 3 # Label: 6)
+• Epinions dataset: i. Obtain the raw dataset of the consumer review site. ii. Preprocess the dataset based on multiple types of information. iii. Construct a multi-attributed-view graph with users as nodes, trust relationships as edges, and attributes collected over the site. iv. Generate node attributes into vector space using Doc2vec. v. Assign labels on nodes based on the product category of the user's reviewed item. (# Nodes: 36497 # Edges: 215043 # Views: 3 # Label: 28)
+• Ciao dataset: i. Obtain the dataset from the consumer review site. ii. Use the same technique as the Epinions dataset to generate the multi-attributed-view graph and its node labels. (# Nodes: 10948 # Edges: 99038 # Views: 3 # Label: 67)
+// Initialize 
+2.	A~ ← normalized symmetric adjacency matrix (A˜ = D^(-1/2) * A * D^(-1/2));
+3.	foreach single-attributed-view m do
+4.	S_m_a ← apply single-attributed-view proximity (s_a,m_i,j = exp(-γ_m * ||x_m_i - x_m_j||^2));
+5.	Z_0_m = X_m ← initialized GCN embeddings;
+6.	w_0_m ← initialized weight on Z_0_m (wm);
+7.	end
+8.	S_v ← apply multi-attributed-view proximity (s_v_i,j = ∏_m s_a,m_i,j);
+// Training loop 
+9.	Foreach training Epoch t do
+10.	if not converged then // Update GCN variables (W) and embeddings (Z_t_m) for each single-attributed-view
+11.	foreach single-attributed-view m do
+12.	W_t_m ← update GCN variables (W) by W_t_m = W_t-1_m - α_m * w_t_m * ∂L_t / ∂Z_t_m * ∂Z_t_m / ∂W_t_m;
+13.	Z_t_m ← update GCN embeddings by Z_(l+1)_m = ϕ_l_m(A~ * Z_l_m * W_l_m);
+14.	end // Update weights (w_t), aggregate embeddings (Z_t), and reconstructed adjacency matrix (A'_t)
+15.	w_t ← update multi-attributed view weights (wm) by w_t = w_t-1 - α_v * ∂L_t / ∂Z_t * ∂Z_t / ∂w_t;
+16.	Z_t ← update aggregate embeddings by Z = ψ(w_1 * Z_1, ..., w_m * Z_m);
+17.	A'_t ← update reconstructed adjacency matrix (A′) by A' = σ(Z * Z^T);
+// Update losses (L, Lres, Lsim)
+18.	 L_t_res ← update reconstruction loss (Lres) between A and A'_t by Lres = 1/n^2 * Σ_i Σ_j CE(a_i,j, a'_i,j);
+19.	 S_t_e ← update embedding proximity (Se) by s_e_i,j = exp(-1/d * ||z_i - z_j||^2);
+20.	L_t_sim ← update node-pairwise similarity loss (Lsim) between S_v and S_t_e by Lsim = 1/n^2 * Σ_i Σ_j |s_v_i,j - s_e_i,j|;
+21.	L_t ← update total loss (L) by L = Lres + λ * Lsim
+22.	end
+23.	end
+// Return the node embeddings in the iteration with minimum total loss (L*) 
+24.	return Z* ← in the iteration of L*
+25.	Link Prediction:
+1.	Compute the node embeddings Z* using the MagCAE algorithm.
+2.	Split the dataset into: a. Training set: 85% of existing edges b. Validation set: 5% of existing edges and the same number of randomly added edges c. Testing set: 10% of existing edges and the same number of randomly added edges
+3.	For each pair of nodes (i, j) in the validation and testing sets, compute the similarity score using Eq. (3): a'_i,j = σ(z_i * z_j^T), where σ is the sigmoid function, and z_i and z_j are the embeddings of nodes i and j, respectively.
+4.	Rank the node pairs by their similarity scores.
+5.	Evaluate the link prediction results using: a. Average Precision (AP) b. Area Under the ROC Curve (AUC)
+26.	Node Classification:
+1.	Compute the node embeddings Z* using the MagCAE algorithm.
+2.	Randomly choose 80% of nodes and their labels as the training set, and use the remaining nodes for testing.
+3.	Train a linear Support Vector Machine (SVM) on the node embeddings from the training set for node classification.
+4.	Apply the trained SVM model to classify the nodes in the testing set.
+5.	Evaluate the node classification performance using Micro-F1 score and Macro-F1 score following 10-fold cross-validation.
+27.	Hyperparameter Analysis
+1.	GCN Hidden Layer Dimension Analysis: a. Set two hidden layers in the GCN and vary the proportions p = number of neurons/length of attributes. b. Set the dimension of the first hidden layer as 2 * p * km, and the second hidden layer as p * km. c. Evaluate the influence of p values and report the result in the "GCN Hidden Layer Dimension v.s. Link Prediction Performance" plot.
+2.	Coefficient Sensitivity Analysis: a. Vary the coefficient λ in the total loss equation (L = Lres + λ * Lsim). b. Set λ to {0.1, 0.5, 1, 1.5, 2} to investigate its impact on MagCAE learning. c. Analyze the performance of the model for different values of λ and report the result in the "Coefficient λ v.s. Link Prediction Performance" plot.
+28.	Visualization
+1.	Visualize Node Embeddings: a. Apply t-SNE to visualize the node embeddings in a two-dimensional space for the Cora dataset.
+2.	Plot the following visualizations: a. "GCN Hidden Layer Dimension v.s. Link Prediction Performance" b. "Coefficient λ v.s. Link Prediction Performance" c. "Training Ratios v.s. Link Prediction Performance" d. "Convergence Curve of MagCAE"
